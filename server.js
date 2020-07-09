@@ -33,8 +33,8 @@ peers.on('connection', socket => {
 
   connectedPeers.set(socket.id, socket)
 
-  socket.on('disconnect', () => {
-    console.log('disconnected')
+  socket.on('disconnect', (socket) => {
+    console.log(`SERVER EVENT: ${socket.id} disconnected`)
     connectedPeers.delete(socket.id)
   })
 
@@ -56,25 +56,16 @@ peers.on('connection', socket => {
 
   socket.on('sendOffer', (data) => {
     console.log('SERVER EVENT: sendOffer');
-    console.log(data);
     socket.broadcast.to(data.payload.roomId).emit('receiveOffer', data.payload.sdp) 
   })
 
   socket.on('sendAnswer', (data) => {
     console.log('SERVER EVENT: sendAnswer');
-    console.log(data);
     socket.broadcast.to(data.payload.roomId).emit('receiveAnswer', data.payload.sdp) 
   })
 
-  socket.on('offerOrAnswer', (data) => {
-    console.log('offerOrAnswer');
-    console.log(data.payload.sdp);
-    console.log(data.payload.roomId);
-    socket.broadcast.to(data.payload.roomId).emit('offerOrAnswer', data.payload.sdp)
-  })
-
-  socket.on('candidate', (data) => {
-    socket.broadcast.to(data.payload.roomId).emit('offerOrAnswer', data.payload.sdp)
+  socket.on('sendCandidate', (data) => {
+    socket.broadcast.to(data.payload.roomId).emit('receiveCandidate', data.payload.candidate)
   })
 
 })

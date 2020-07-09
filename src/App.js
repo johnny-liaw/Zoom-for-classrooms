@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-
 import io from 'socket.io-client'
 
 class App extends Component {
@@ -9,7 +8,6 @@ class App extends Component {
     this.remoteVideoref = React.createRef()
     this.roomIdRef = React.createRef()
     this.socket = null
-    this.candidates = []
     this.roomId = null
     this.initiator = false
     this.state = {
@@ -31,23 +29,19 @@ class App extends Component {
     })
 
     this.socket.on('receiveOffer', async (sdp) => {
-      this.textref.value = JSON.stringify(sdp)
       console.log('CLIENT EVENT: receiveOffer');
-      console.log(sdp);
       await this.pc.setRemoteDescription(new RTCSessionDescription(sdp))
       if(!this.initiator) this.createAnswer()
     }) 
 
     this.socket.on('receiveAnswer', async (sdp) => {
-      this.textref.value = JSON.stringify(sdp)
       console.log('CLIENT EVENT: receiveAnswer');
-      console.log(sdp);
       await this.pc.setRemoteDescription(new RTCSessionDescription(sdp))
     }) 
 
-    this.socket.on('candidate', (payload) => {
-      // console.log('Candidate received')
-      this.pc.addIceCandidate(new RTCIceCandidate(payload.candidate))
+    this.socket.on('receiveCandidate', (candidate) => {
+      console.log('CLIENT EVENT: receiveCandidate')
+      this.pc.addIceCandidate(new RTCIceCandidate(candidate))
     })
 
     this.socket.on('full', (payload) => {
@@ -55,11 +49,11 @@ class App extends Component {
     })
 
     this.socket.on('roomReady', (pyaload) => {
-      console.log('room is ready!')
+      console.log('CLIENT EVENT: roomReady')
     }) 
 
     this.socket.on('brokerConnection', () => {
-      console.log('brokering connection')
+      console.log('CLIENT EVENT: brokerConnection')
       this.createOffer()
     }) 
 
@@ -84,9 +78,10 @@ class App extends Component {
     this.pc.onicecandidate = (e) => {
       // send the candidates to the remote peer
       // see addCandidate below to be triggered on the remote peer
-      // console.log(e)
+      console.log('CLIENT EVENT: sendCandidate');
+      console.log(e.candidate)
       if (e.candidate) {
-        this.sendToPeer('candidate', {
+        this.sendToPeer('sendCandidate', {
           candidate: e.candidate,
           roomId: this.state.roomId
         })
@@ -95,11 +90,13 @@ class App extends Component {
 
     // triggered when there is a change in connection state
     this.pc.oniceconnectionstatechange = (e) => {
-      // console.log(e)
+      console.log('CLIENT EVENT: iceConnectionChange');
+      console.log(e)
     }
 
     // triggered when a stream is added to pc, see below - this.pc.addStream(stream)
     this.pc.onaddstream = (e) => {
+      console.log('CLIENT EVENT: onAddStream');
       this.remoteVideoref.current.srcObject = e.stream
     }
 
@@ -154,26 +151,16 @@ class App extends Component {
     this.pc.createAnswer({ offerToReceiveVideo: 1 })
       .then(sdp => {
         this.pc.setLocalDescription(sdp)
-        console.log(sdp);
         let obj = { sdp: sdp, roomId: this.state.roomId }
-        console.log(obj);
         this.sendToPeer('sendAnswer', obj)
     })
-  }
-
-  // setting remote description
-  setRemoteDescription = () => {
-    const desc = JSON.parse(this.textref.value)
-    this.pc.setRemoteDescription(new RTCSessionDescription(desc))
   }
 
   // creating a room
   roomCreator = () => {
     // if no rooom id in input, means user is generating a new room
     // else, user is trying to join an existing room
-    console.log(this.roomInputRef.value)
     if(this.roomInputRef.value === '') {
-      console.log('hi')
       let roomId = Math.floor(100 + Math.random() * 900) 
       this.initiator = true
       this.setState({
@@ -216,8 +203,6 @@ class App extends Component {
 
         <input placeholder='Room Id' ref={ref => { this.roomInputRef = ref }}></input>
 
-        {/* <button onClick={this.createOffer}>Offer</button>
-        <button onClick={this.createAnswer}>Answer</button> */}
         <button 
           disabled={this.state.roomId}
           onClick={this.roomCreator}
@@ -225,7 +210,6 @@ class App extends Component {
           Put me in a room
         </button>
         <br />
-        <textarea style={{ width: 450, height:40 }} ref={ref => { this.textref = ref }} />
       </div>
     )
   }
