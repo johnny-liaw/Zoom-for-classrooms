@@ -30,14 +30,20 @@ class App extends Component {
       console.log(success)
     })
 
-    this.socket.on('offerOrAnswer', (sdp) => {
+    this.socket.on('receiveOffer', async (sdp) => {
       this.textref.value = JSON.stringify(sdp)
-      // set sdp as remote description
-      console.log('socket on offer or answer');
+      console.log('CLIENT EVENT: receiveOffer');
       console.log(sdp);
-      if(!sdp) this.pc.setRemoteDescription(new RTCSessionDescription(sdp))
+      await this.pc.setRemoteDescription(new RTCSessionDescription(sdp))
       if(!this.initiator) this.createAnswer()
-    })
+    }) 
+
+    this.socket.on('receiveAnswer', async (sdp) => {
+      this.textref.value = JSON.stringify(sdp)
+      console.log('CLIENT EVENT: receiveAnswer');
+      console.log(sdp);
+      await this.pc.setRemoteDescription(new RTCSessionDescription(sdp))
+    }) 
 
     this.socket.on('candidate', (payload) => {
       // console.log('Candidate received')
@@ -129,12 +135,12 @@ class App extends Component {
   /* ACTION METHODS FROM THE BUTTONS ON SCREEN */
 
   createOffer = () => {
-    console.log('Creating Offer')
+    console.log('CLIENT EVENT: createOffer')
     console.log(this.state.roomId);
     this.pc.createOffer({ offerToReceiveVideo: 1 })
       .then(sdp => {
         this.pc.setLocalDescription(sdp)
-        this.sendToPeer('offerOrAnswer', {
+        this.sendToPeer('sendOffer', {
           sdp: sdp, 
           roomId: this.state.roomId
         })
@@ -143,16 +149,15 @@ class App extends Component {
 
   // creates an SDP answer to an offer received from remote peer
   createAnswer = () => {
-    console.log('Creating Answer')
+    console.log('CLIENT EVENT: createAnswer')
     console.log(this.state.roomId);
     this.pc.createAnswer({ offerToReceiveVideo: 1 })
       .then(sdp => {
         this.pc.setLocalDescription(sdp)
-        console.log('Created sdp answer');
         console.log(sdp);
         let obj = { sdp: sdp, roomId: this.state.roomId }
         console.log(obj);
-        this.sendToPeer('offerOrAnswer', obj)
+        this.sendToPeer('sendAnswer', obj)
     })
   }
 

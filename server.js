@@ -54,15 +54,19 @@ peers.on('connection', socket => {
     }
   })
 
+  socket.on('sendOffer', (data) => {
+    console.log('SERVER EVENT: sendOffer');
+    console.log(data);
+    socket.broadcast.to(data.payload.roomId).emit('receiveOffer', data.payload.sdp) 
+  })
+
+  socket.on('sendAnswer', (data) => {
+    console.log('SERVER EVENT: sendAnswer');
+    console.log(data);
+    socket.broadcast.to(data.payload.roomId).emit('receiveAnswer', data.payload.sdp) 
+  })
+
   socket.on('offerOrAnswer', (data) => {
-    // // send to the other peer(s) if any
-    // for (const [socketID, socket] of connectedPeers.entries()) {
-    //   // don't send to self
-    //   if (socketID !== data.socketID) {
-    //     console.log(socketID, data.payload.type)
-    //     socket.emit('offerOrAnswer', data.payload)
-    //   }
-    // }
     console.log('offerOrAnswer');
     console.log(data.payload.sdp);
     console.log(data.payload.roomId);
@@ -70,14 +74,6 @@ peers.on('connection', socket => {
   })
 
   socket.on('candidate', (data) => {
-    // // send candidate to the other peer(s) if any
-    // for (const [socketID, socket] of connectedPeers.entries()) {
-    //   // don't send to self
-    //   if (socketID !== data.socketID) {
-    //     console.log(socketID, data.payload)
-    //     socket.emit('candidate', data.payload)
-    //   }
-    // }
     socket.broadcast.to(data.payload.roomId).emit('offerOrAnswer', data.payload.sdp)
   })
 
