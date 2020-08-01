@@ -54,27 +54,23 @@ class App extends Component {
 
     this.socket.on('brokerConnection', () => {
       console.log('CLIENT EVENT: brokerConnection')
+      this.initDataChannel();
       this.createOffer()
     }) 
 
 
     const pc_config = {
       "iceServers": [
-        // {
-        //   urls: 'stun:[STUN_IP]:[PORT]',
-        //   'credentials': '[YOR CREDENTIALS]',
-        //   'username': '[USERNAME]'
-        // },
         {
           urls : 'stun:stun.l.google.com:19302'
         }
       ]
     }
 
-    // create an instance of RTCPeerConnection
     this.pc = new RTCPeerConnection(pc_config)
+    this.pc.ondatachannel = this.receiveChannelCallback;
 
-    // triggered when a new candidate is returned
+
     this.pc.onicecandidate = (e) => {
       // send the candidates to the remote peer
       // see addCandidate below to be triggered on the remote peer
@@ -88,7 +84,6 @@ class App extends Component {
       }
     }
 
-    // triggered when there is a change in connection state
     this.pc.oniceconnectionstatechange = (e) => {
       console.log('CLIENT EVENT: iceConnectionChange');
       console.log(e)
@@ -131,6 +126,26 @@ class App extends Component {
 
   /* ACTION METHODS FROM THE BUTTONS ON SCREEN */
 
+  initDataChannel = () => {
+    console.log('CLIENT EVENT: initDataChannel');
+    this.datachannel = this.pc.createDataChannel('dataChannel');
+    console.log(this.datachannel);
+    this.datachannel.onopen = this.handleDataChannelStatusChange;
+    this.datachannel.onclose = this.handleDataChannelStatusChange;
+    this.datachannel.onmessage = this.handleReceiveMessage;
+  }
+
+  handleReceiveMessage = (e) => {
+    console.log('CLIENT EVENT: handleReceiveMessage');
+    console.log(e);
+    console.log(JSON.parse(e.data))
+  }
+
+  handleDataChannelStatusChange = (e) => {
+    console.log('CLIENT EVENT: handleDataChannelStatusChange');
+    console.log(e);
+  }
+
   createOffer = () => {
     console.log('CLIENT EVENT: createOffer')
     console.log(this.state.roomId);
@@ -142,6 +157,17 @@ class App extends Component {
           roomId: this.state.roomId
         })
     })
+  }
+s
+  receiveChannelCallback = (event) => {
+    console.log('CLIENT EVENT: receiveChannelCallBack');
+    this.datachannel = event.channel;
+    this.datachannel.onmessage = this.handleReceiveMessage;
+    this.datachannel.onopen = this.handleReceiveChannelStatusChange;
+  }
+
+  handleReceiveChannelStatusChange = (e) => {
+    console.log(e)
   }
 
   // creates an SDP answer to an offer received from remote peer
@@ -176,6 +202,18 @@ class App extends Component {
     }
   }
   
+  sendMessage = () => {
+    let content = this.textMsgRef.value
+    console.log(content);
+    let obj = JSON.stringify({ 'type': 'herro', 'data': content })
+    console.log(obj);
+    this.datachannel.send(obj);
+  }
+
+  sendData = (payload) => {
+    this.datachannel.send(payload)
+  }
+
   render() {
     return (
       <div>
@@ -209,6 +247,8 @@ class App extends Component {
         >
           Put me in a room
         </button>
+        <input ref={ref => { this.textMsgRef = ref }} placeholder="message to semd"></input>
+        <button onClick={this.sendMessage}>Send</button>
         <br />
       </div>
     )

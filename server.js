@@ -33,7 +33,7 @@ peers.on('connection', socket => {
 
   connectedPeers.set(socket.id, socket)
 
-  socket.on('disconnect', (socket) => {
+  socket.on('disconnect', () => {
     console.log(`SERVER EVENT: ${socket.id} disconnected`)
     connectedPeers.delete(socket.id)
   })
