@@ -21,7 +21,7 @@ const server = app.listen(port, () => console.log(`Example app listening on port
 io.listen(server)
 
 // https://www.tutorialspoint.com/socket.io/socket.io_namespaces.htm
-const peers = io.of('/webrtcPeer')
+const peers = io.of('')
 
 // keep a reference of all socket connections
 let connectedPeers = new Map()
@@ -38,9 +38,9 @@ peers.on('connection', socket => {
     connectedPeers.delete(socket.id)
   })
 
-  socket.on('join', (data) => {
+  socket.on('join', (data) => { 
     console.log(`${socket.id} joined room ${data.payload}`)
-    let clients = io.nsps['/webrtcPeer'].adapter.rooms[data.payload];
+    let clients = io.nsps['/'].adapter.rooms[data.payload];
     let numClients = typeof clients !== "undefined" ? clients.length : 0;
     if(numClients == 0) {
       socket.join(data.payload) 
@@ -56,6 +56,7 @@ peers.on('connection', socket => {
 
   socket.on('sendOffer', (data) => {
     console.log('SERVER EVENT: sendOffer');
+    console.log(io.nsps['/'].adapter.rooms[data.payload.roomId])
     socket.broadcast.to(data.payload.roomId).emit('receiveOffer', data.payload.sdp) 
   })
 
